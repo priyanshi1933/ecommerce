@@ -4,7 +4,7 @@ export interface IProduct extends Document {
   name: string;
   description: string;
   category: string;
-  image: string;
+  image: string[];
   variants: {
     size: string;
     color: string;
@@ -29,8 +29,9 @@ const ProductSchema: Schema<IProduct> = new Schema<IProduct>(
       required: true,
     },
     image: {
-      type: String,
+      type: [String],
       required: true,
+      default:[],
     },
     variants: [
       {

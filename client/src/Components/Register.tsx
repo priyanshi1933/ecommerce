@@ -53,36 +53,52 @@ const Register = () => {
   };
 
   return (
-    <div className="container-fluid vh-100 p-0 overflow-hidden">
-      <div className="row g-0 vh-100">
+    <div
+      className="container-fluid min-vh-100 d-flex align-items-center justify-content-center"
+      style={{
+        backgroundColor: "#fdfaf9",
+        backgroundImage: "radial-gradient(#efebe9 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+      }}
+    >
+      <div
+        className="row shadow-lg bg-white rounded-4 overflow-hidden mx-2"
+        style={{ maxWidth: "900px" }}
+      >
         <div
-          className="col-lg-6 d-none d-lg-flex flex-column justify-content-center p-5 text-white"
+          className="col-md-5 d-none d-md-flex flex-column justify-content-end p-5 text-white"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('./register.jpg')`,
+            backgroundImage: `linear-gradient(to top, rgba(62, 39, 35, 0.8), transparent), url('./register.jpg')`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            minHeight: "500px",
           }}
         >
-          <h1 className="display-3 fw-bold">
-            Find Clothes That
-            <br />
-            Matches Your Style.
-          </h1>
-          <p className="lead opacity-75">Simple is more.</p>
+          <h2 className="fw-bold mb-3">Join the Community.</h2>
+          <p
+            className="small opacity-75 border-start ps-3"
+            style={{ borderColor: "#8d6e63 !important" }}
+          >
+            Experience the finest collection of minimalist fashion and curated
+            essentials.
+          </p>
         </div>
 
-        <div className="col-lg-6 d-flex align-items-center justify-content-center bg-white p-4">
-          <div className="w-100" style={{ maxWidth: "400px" }}>
-            <div className="text-center mb-5">
-              <h2 className="fw-bold">Create Account</h2>
-              <p className="text-secondary">
-                It's free and only takes a minute
-              </p>
-            </div>
+        <div className="col-md-7 p-4 p-lg-5">
+          <div className="mb-4">
+            <h3 className="fw-bold" style={{ color: "#3e2723" }}>
+              Register
+            </h3>
+            <p className="text-muted small">Let's get your account set up.</p>
+          </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="mb-3">
-                <label className="form-label fw-semibold small">
+          <form onSubmit={handleSubmit}>
+            <div className="row">
+              <div className="col-12 mb-3">
+                <label
+                  className="form-label small fw-bold text-uppercase tracking-wider text-muted"
+                  style={{ fontSize: "0.7rem" }}
+                >
                   Full Name
                 </label>
                 <input
@@ -90,75 +106,91 @@ const Register = () => {
                   name="name"
                   value={user.name}
                   onChange={handleChange}
-                  className={`form-control p-2 ${msg.name ? "is-invalid" : ""}`}
-                  placeholder="Enter your name"
+                  className={`form-control border-0 bg-light p-2 ${msg.name ? "is-invalid" : ""}`}
+                  placeholder="John Doe"
                 />
                 <div className="invalid-feedback">{msg.name}</div>
               </div>
 
-              <div className="mb-3">
-                <label className="form-label fw-semibold small">
-                  Email Address
+              <div className="col-12 mb-3">
+                <label
+                  className="form-label small fw-bold text-uppercase tracking-wider text-muted"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  Email
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={user.email}
                   onChange={handleChange}
-                  className={`form-control p-2 ${msg.email ? "is-invalid" : ""}`}
-                  placeholder="name@example.com"
+                  className={`form-control border-0 bg-light p-2 ${msg.email ? "is-invalid" : ""}`}
+                  placeholder="john@example.com"
                 />
                 <div className="invalid-feedback">{msg.email}</div>
               </div>
 
-              <div className="row">
-                <div className="col-6 mb-3">
-                  <label className="form-label fw-semibold small">Role</label>
-                  <select
-                    name="role"
-                    value={user.role}
-                    onChange={handleChange}
-                    className={`form-select p-2 ${msg.role ? "is-invalid" : ""}`}
-                  >
-                    <option value="">Select</option>
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <div className="invalid-feedback">{msg.role}</div>
-                </div>
+              <div className="col-md-6 mb-3">
+                <label
+                  className="form-label small fw-bold text-uppercase tracking-wider text-muted"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  Role
+                </label>
+                <select
+                  name="role"
+                  value={user.role}
+                  onChange={handleChange}
+                  className={`form-select border-0 bg-light p-2 ${msg.role ? "is-invalid" : ""}`}
+                >
+                  <option value="">Choose...</option>
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <div className="invalid-feedback">{msg.role}</div>
               </div>
 
-              <div className="mb-4">
-                <label className="form-label fw-semibold small">Password</label>
+              <div className="col-md-6 mb-3">
+                <label
+                  className="form-label small fw-bold text-uppercase tracking-wider text-muted"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  Password
+                </label>
                 <input
                   type="password"
                   name="password"
                   value={user.password}
                   onChange={handleChange}
-                  className={`form-control p-2 ${msg.password ? "is-invalid" : ""}`}
+                  className={`form-control border-0 bg-light p-2 ${msg.password ? "is-invalid" : ""}`}
                   placeholder="••••••••"
                 />
                 <div className="invalid-feedback">{msg.password}</div>
               </div>
-              <button
-                type="submit"
-                className="btn btn-dark w-100 py-2 fw-bold shadow-sm"
-              >
-                Sign Up
-              </button>
-            </form>
-
-            <div className="text-center mt-4">
-              <span className="text-muted small">
-                Already have an account?{" "}
-              </span>
-              <button
-                onClick={() => navigate("/")}
-                className="btn btn-link p-0 text-dark fw-bold text-decoration-none small"
-              >
-                Log In
-              </button>
             </div>
+
+            <button
+              type="submit"
+              className="btn w-100 py-2 mt-4 fw-bold shadow-sm"
+              style={{
+                backgroundColor: "#3e2723",
+                color: "#fff",
+                letterSpacing: "1px",
+              }}
+            >
+              CREATE ACCOUNT
+            </button>
+          </form>
+
+          <div className="text-center mt-4">
+            <span className="text-muted small">Already a member? </span>
+            <button
+              onClick={() => navigate("/")}
+              className="btn btn-link p-0 fw-bold text-decoration-none small"
+              style={{ color: "#8d6e63" }}
+            >
+              Sign In
+            </button>
           </div>
         </div>
       </div>

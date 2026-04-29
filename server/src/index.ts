@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import router from "./routes/route";
 import cors,{CorsOptions} from "cors";
+import path from "path"
 
 dotenv.config({ path: ".env.local" });
 
@@ -25,6 +26,8 @@ const app = express();
 app.use(express.json());
 app.use(cors(corsOptions));
 app.use(router);
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on PORT ${PORT}`);
