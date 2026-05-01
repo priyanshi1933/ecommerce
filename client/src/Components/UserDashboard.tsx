@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import UserNavbar from "./UserNavbar";
 import toast from "react-hot-toast";
+import FlashSaleTimer from "./FlashSaleTimer";
 
 interface IVariant {
   size: string;
@@ -26,13 +27,27 @@ const UserDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState<IProduct | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [flashSales, setFlashSales] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   const token = localStorage.getItem("token");
 
+  // useEffect(() => {
+  //   fetchProducts();
+  // }, []);
+
   useEffect(() => {
-    fetchProducts();
+    const fetchFlashSales = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/active");
+        setFlashSales(res.data.data);
+      } catch (err) {
+        console.error("Error loading flash sales", err);
+      }
+    };
+    fetchFlashSales();
+    fetchProducts(); // Your existing product fetch function
   }, []);
 
   const fetchProducts = async () => {
@@ -149,7 +164,7 @@ const UserDashboard = () => {
         ) : (
           <div className="row g-4 d-flex align-items-stretch">
             <div className="row g-4 d-flex align-items-stretch">
-              {currentItems.length > 0 ? (
+              {/* {currentItems.length > 0 ? (
                 currentItems.map((product) => (
                   <div key={product._id} className="col-6 col-md-4 col-lg-3">
                     <div
@@ -187,7 +202,85 @@ const UserDashboard = () => {
                 <div className="col-12 text-center py-5 text-muted">
                   No products found.
                 </div>
-              )}
+              )} */}
+              {currentItems.map((product) => {
+                // Check if this product is in a flash sale
+                const activeSale = flashSales.find(
+                  (sale) => sale.productId._id === product._id,
+                );
+
+                return (
+                  <div key={product._id} className="col-6 col-md-4 col-lg-3">
+                    <div
+                      className="card h-100 border-0 shadow-sm text-center position-relative"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => openProductModal(product)}
+                    >
+                      {/* FLASH SALE BADGE */}
+                      {activeSale && (
+                        <div
+                          className="position-absolute top-0 start-0 w-100 py-1 fw-bold text-white shadow-sm"
+                          style={{
+                            backgroundColor: "#d32f2f",
+                            fontSize: "0.65rem",
+                            zIndex: 10,
+                          }}
+                        >
+                          ⚡ FLASH SALE ⚡
+                        </div>
+                      )}
+
+                      <div
+                        style={{ height: "230px", backgroundColor: "#f8f9fa" }}
+                      >
+                        <img
+                          src={`http://localhost:3000/uploads/${product.image[0]}`}
+                          className="w-100 h-100 object-fit-cover"
+                          alt={product.name}
+                        />
+                      </div>
+
+                      <div className="card-body px-3 py-3">
+                        {/* TIMER ON DASHBOARD IF SALE ACTIVE */}
+                        {activeSale && (
+                          <div className="mb-2">
+                            <FlashSaleTimer
+                              startTime={activeSale.startTime}
+                              endTime={activeSale.endTime}
+                            />
+                          </div>
+                        )}
+
+                        <small
+                          className="text-uppercase fw-bold text-muted"
+                          style={{ fontSize: "0.65rem" }}
+                        >
+                          {product.category}
+                        </small>
+                        <h6 className="fw-bold text-dark text-truncate mt-1 mb-2">
+                          {product.name}
+                        </h6>
+
+                        <div
+                          className="fw-bold"
+                          style={{ color: activeSale ? "#d32f2f" : "#3e2723" }}
+                        >
+                          {activeSale ? (
+                            <span>
+                              <span className="text-decoration-line-through text-muted me-2 small">
+                                ${product.variants[0]?.price}
+                              </span>
+                              ${activeSale.salePrice}
+                            </span>
+                          ) : (
+                            `$${product.variants[0]?.price}`
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {totalPages > 1 && (
@@ -286,6 +379,25 @@ const UserDashboard = () => {
                   </div>
 
                   <div className="col-md-7">
+                    {flashSales.find(
+                      (s) => s.productId._id === selectedProduct._id,
+                    ) && (
+                      <div className="alert alert-danger rounded-0 border-0 py-2 small fw-bold mb-3 d-flex justify-content-between align-items-center">
+                        <span>⚡ FLASH SALE PRICE!</span>
+                        <FlashSaleTimer
+                          startTime={
+                            flashSales.find(
+                              (s) => s.productId._id === selectedProduct._id,
+                            ).startTime
+                          }
+                          endTime={
+                            flashSales.find(
+                              (s) => s.productId._id === selectedProduct._id,
+                            ).endTime
+                          }
+                        />
+                      </div>
+                    )}
                     <span
                       className="badge mb-2"
                       style={{ backgroundColor: "#efebe9", color: "#8d6e63" }}

@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 const AdminNavbar = () => {
@@ -57,6 +56,14 @@ const AdminNavbar = () => {
                 to="/displayProduct"
               >
                 Display Product
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="nav-link fw-bold px-3 text-dark text-uppercase small tracking-widest"
+                to="/admin/createFlashSale"
+              >
+                Create Flash Sale
               </Link>
             </li>
           </ul>

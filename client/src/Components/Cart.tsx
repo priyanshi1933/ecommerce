@@ -7,6 +7,8 @@ import { useNavigate } from "react-router-dom";
 const CartPage = () => {
   const [cart, setCart] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cardData, setCardData] = useState({ number: "", expiry: "", cvc: "" });
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
   useEffect(() => {
@@ -89,34 +91,58 @@ const CartPage = () => {
       </div>
     );
 
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-
-  const handlePlaceOrder = async () => {
-  try {
-    setLoading(true); 
-    
-    toast.loading("Processing Payment...", { id: "payment" });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const idempotencyKey = `ord-${Date.now()}`;
-    const res = await axios.post(
-      "http://localhost:3000/addOrder",
-      { idempotencyKey },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    if (res.data.success) {
-      toast.success("Payment Successful! Order Created.", { id: "payment" });
-      window.dispatchEvent(new Event("cartUpdated"));
-      navigate("/orderHistory");
+    if (cardData.number.length < 16 || cardData.cvc.length < 3) {
+      toast.error("Invalid card details (Mock)");
+      return;
     }
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || "Payment Failed", { id: "payment" });
-  } finally {
-    setLoading(false);
-  }
-};
 
+    setShowPaymentModal(false);
+    await processFinalOrder();
+  };
+
+
+
+  const processFinalOrder = async () => {
+    const TOAST_ID = "payment-process"; 
+
+    try {
+      setLoading(true);
+    
+      toast.loading("Securing payment and placing order...", { id: TOAST_ID });
+
+      const idempotencyKey = `ord-${Date.now()}`;
+      const res = await axios.post(
+        "http://localhost:3000/addOrder",
+        {
+          idempotencyKey,
+          paymentStatus: "Success",
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (res.data.success) {
+        toast.success("Order Placed Successfully! 🎉", {
+          id: TOAST_ID,
+          duration: 4000, 
+        });
+
+        window.dispatchEvent(new Event("cartUpdated"));
+
+        setTimeout(() => {
+          navigate("/orderHistory");
+        }, 2000);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Order Failed", {
+        id: TOAST_ID,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-vh-100 bg-white">
@@ -271,10 +297,11 @@ const CartPage = () => {
                   <span>Estimated Total</span>
                   <span>${calculateTotal().toFixed(2)}</span>
                 </div>
+             
                 <button
                   className="btn w-100 text-white py-3 rounded-0 fw-bold shadow-sm mb-3"
                   style={{ backgroundColor: "#3e2723" }}
-                  onClick={handlePlaceOrder}
+                  onClick={() => setShowPaymentModal(true)}
                 >
                   PROCEED TO CHECKOUT
                 </button>
@@ -283,6 +310,96 @@ const CartPage = () => {
           </div>
         )}
       </div>
+      {showPaymentModal && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content rounded-0 border-0 shadow">
+              <div className="modal-header border-0 pb-0">
+                <h5
+                  className="fw-bold text-uppercase"
+                  style={{ color: "#3e2723" }}
+                >
+                  Secure Checkout
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowPaymentModal(false)}
+                ></button>
+              </div>
+              <form onSubmit={handlePaymentSubmit}>
+                <div className="modal-body py-4">
+                  <div className="mb-3">
+                    <label className="small fw-bold text-muted mb-1">
+                      CARD NUMBER
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control rounded-0 shadow-none"
+                      placeholder="1234567891011121"
+                      maxLength={16}
+                      required
+                      onChange={(e) =>
+                        setCardData({ ...cardData, number: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="row">
+                    <div className="col-7">
+                      <label className="small fw-bold text-muted mb-1">
+                        EXPIRY (MM/YY)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control rounded-0 shadow-none"
+                        placeholder="12/26"
+                        maxLength={5}
+                        required
+                      />
+                    </div>
+                    <div className="col-5">
+                      <label className="small fw-bold text-muted mb-1">
+                        CVC
+                      </label>
+                      <input
+                        type="password"
+                        className="form-control rounded-0 shadow-none"
+                        placeholder="123"
+                        maxLength={3}
+                        required
+                        onChange={(e) =>
+                          setCardData({ ...cardData, cvc: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <p
+                    className="text-muted mt-3 mb-0"
+                    style={{ fontSize: "0.7rem" }}
+                  >
+                    * This is a mock payment gateway for testing purposes.
+                  </p>
+                </div>
+                <div className="modal-footer border-0 pt-0">
+                
+                  <button
+                    type="submit"
+                    className="btn btn-dark w-100 rounded-0 fw-bold py-2"
+                    disabled={loading}
+                  >
+                    {loading
+                      ? "PROCESSING..."
+                      : `PAY $${calculateTotal().toFixed(2)}`}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

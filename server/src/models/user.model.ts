@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: string;
+  joinedFlashSales: mongoose.Types.ObjectId[];
 }
 
 const UserSchema: Schema<IUser> = new Schema<IUser>(
@@ -28,6 +29,7 @@ const UserSchema: Schema<IUser> = new Schema<IUser>(
       default: "user",
       required: true,
     },
+    joinedFlashSales: [{ type: Schema.Types.ObjectId, ref: "Flashsale" }],
   },
   {
     timestamps: true,

@@ -20,3 +20,11 @@ export const verifyToken=(req:Request,res:Response,next:NextFunction)=>{
         return res.status(401).json({message:"Invalid token"});
     }
 }
+
+export const verifyAdmin = (req: any, res: any, next: any) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: "Access denied. Admins only." });
+  }
+};

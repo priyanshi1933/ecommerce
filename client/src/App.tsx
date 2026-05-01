@@ -11,6 +11,8 @@ import EditProduct from "./Components/EditProduct";
 import Cart from "./Components/Cart";
 import OrderHistory from "./Components/OrderHistory";
 import OrderDetails from "./Components/OrderDetails";
+import CreateFlashSale from "./Components/CreateFlashSale";
+import FlashSalePage from "./Components/FlashSalePage";
 
 function App() {
   const navigate = useNavigate();
@@ -34,6 +36,8 @@ function App() {
         <Route path="/cart" element={<Cart />}></Route>
         <Route path="/orderHistory" element={<OrderHistory />}></Route>
         <Route path="/orderDetails/:orderId" element={<OrderDetails />}></Route>
+        <Route path="/admin/createFlashSale" element={<CreateFlashSale />}></Route>
+        <Route path="/flashSales" element={<FlashSalePage />} /> 
       </Routes>
     </>
   );

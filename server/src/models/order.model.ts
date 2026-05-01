@@ -8,6 +8,9 @@ export interface IOrder extends Document {
     name: string;
     price: number;
     quantity: number;
+    image: string;
+    color:string;
+    size:string;
   }[];
   totalAmount: number;
   status: "Placed" | "Paid" | "Shipped" | "Delivered";
@@ -40,6 +43,9 @@ const OrderSchema: Schema<IOrder> = new Schema<IOrder>(
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true },
+        image: { type: String, required: true },
+        color: { type: String },
+        size: { type: String },
       },
     ],
     totalAmount: {
