@@ -71,7 +71,7 @@ const OrderDetails = () => {
                       className="border"
                     >
                       <img
-                        src={`http://localhost:3000/uploads/${item.image}`}
+                        src={`http://localhost:3000/uploads/${item.image || item.productId?.image?.[0]}`}
                         className="w-100 h-100 object-fit-cover"
                         alt={item.name}
                         onError={(e) => {

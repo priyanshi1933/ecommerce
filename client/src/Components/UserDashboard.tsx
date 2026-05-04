@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import UserNavbar from "./UserNavbar";
 import toast from "react-hot-toast";
 import FlashSaleTimer from "./FlashSaleTimer";
 
+// --- Interfaces ---
 interface IVariant {
+  _id: string;
   size: string;
   color: string;
   stock: number;
@@ -20,12 +22,53 @@ interface IProduct {
   variants: IVariant[];
 }
 
+// --- Sub-Component: Image Gallery ---
+const ProductImageGallery = ({ images, activeIndex, setActiveIndex }: any) => {
+  return (
+    <div className="d-flex flex-column gap-2">
+      <div
+        style={{ height: "350px", backgroundColor: "#f8f9fa" }}
+        className="rounded overflow-hidden border shadow-sm"
+      >
+        <img
+          src={`http://localhost:3000/uploads/${images[activeIndex] || images[0]}`}
+          className="w-100 h-100 object-fit-cover"
+          alt="main-view"
+          onError={(e) => {
+            e.currentTarget.src = "https://placeholder.com";
+          }}
+        />
+      </div>
+      <div className="d-flex gap-2 flex-wrap">
+        {images.map((img: string, idx: number) => (
+          <img
+            key={idx}
+            src={`http://localhost:3000/uploads/${img}`}
+            onClick={() => setActiveIndex(idx)}
+            className={`rounded border-2 ${activeIndex === idx ? "border-dark" : "border-transparent"}`}
+            style={{
+              width: "55px",
+              height: "55px",
+              objectFit: "cover",
+              cursor: "pointer",
+              opacity: activeIndex === idx ? 1 : 0.5,
+              transition: "0.2s",
+            }}
+            alt={`thumb-${idx}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- Main Component ---
 const UserDashboard = () => {
   const [products, setProducts] = useState<IProduct[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<IProduct | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0); // Tracks selected variant index
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [flashSales, setFlashSales] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,34 +76,49 @@ const UserDashboard = () => {
 
   const token = localStorage.getItem("token");
 
-  // useEffect(() => {
-  //   fetchProducts();
-  // }, []);
-
   useEffect(() => {
-    const fetchFlashSales = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const res = await axios.get("http://localhost:3000/active");
-        setFlashSales(res.data.data);
+        const [prodRes, saleRes] = await Promise.all([
+          axios.get("http://localhost:3000/getProduct", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:3000/active"),
+        ]);
+        setProducts(prodRes.data.data);
+        setFlashSales(saleRes.data.data);
       } catch (err) {
-        console.error("Error loading flash sales", err);
+        console.error("Error loading data", err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchFlashSales();
-    fetchProducts(); // Your existing product fetch function
-  }, []);
+    fetchData();
+  }, [token]);
 
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get("http://localhost:3000/getProduct", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProducts(res.data.data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      setLoading(false);
-    }
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
+
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(products.map((p) => p.category)))],
+    [products],
+  );
+
+  // Variant-Specific Lookup: Matches Product ID AND Variant ID
+  const getActiveSale = (productId: string, variantId: string) => {
+    return flashSales.find((sale) => {
+      const sProdId =
+        typeof sale.productId === "object"
+          ? sale.productId._id
+          : sale.productId;
+      const sVarId =
+        typeof sale.variantId === "object"
+          ? sale.variantId._id
+          : sale.variantId;
+      return sProdId === productId && sVarId === variantId;
+    });
   };
 
   const filteredProducts = products.filter((p) => {
@@ -80,40 +138,31 @@ const UserDashboard = () => {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const categories = [
-    "All",
-    ...Array.from(new Set(products.map((p) => p.category))),
-  ];
-
   const openProductModal = (product: IProduct) => {
     setSelectedProduct(product);
-    setActiveIndex(0);
+    setActiveIndex(0); // Reset to first variant when opening
   };
 
   const handleAddToCart = async () => {
     if (!selectedProduct) return;
-
     try {
       const selectedVariant = selectedProduct.variants[activeIndex];
-
       const payload = {
         productId: selectedProduct._id,
-        variantId: (selectedVariant as any)._id,
+        variantId: selectedVariant._id,
         quantity: 1,
+        selectedImage: selectedProduct.image[activeIndex] 
       };
-
       const res = await axios.post("http://localhost:3000/addCart", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (res.data.success) {
         toast.success("Added to cart!");
         window.dispatchEvent(new Event("cartUpdated"));
         setSelectedProduct(null);
       }
     } catch (error: any) {
-      console.error("Error adding to cart:", error);
-      alert(error.response?.data?.message || "Failed to add to cart");
+      toast.error(error.response?.data?.message || "Failed to add to cart");
     }
   };
 
@@ -129,24 +178,18 @@ const UserDashboard = () => {
           <h2 className="fw-bold m-0" style={{ color: "#3e2723" }}>
             Modern Essentials
           </h2>
-
           <div className="d-flex justify-content-center flex-wrap gap-2 mt-4">
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => {
-                  setSelectedCategory(cat);
-                  setCurrentPage(1);
-                }}
-                className="btn btn-sm rounded-0 px-4 py-2 fw-bold text-uppercase tracking-wider transition-all"
+                onClick={() => setSelectedCategory(cat)}
+                className="btn btn-sm rounded-0 px-4 py-2 fw-bold text-uppercase shadow-none"
                 style={{
                   fontSize: "0.7rem",
-                  letterSpacing: "1px",
                   backgroundColor:
                     selectedCategory === cat ? "#3e2723" : "transparent",
                   color: selectedCategory === cat ? "#ffffff" : "#3e2723",
                   border: `1px solid #3e2723`,
-                  transition: "0.3s ease",
                 }}
               >
                 {cat}
@@ -162,51 +205,20 @@ const UserDashboard = () => {
             <div className="spinner-border" style={{ color: "#5d4037" }}></div>
           </div>
         ) : (
-          <div className="row g-4 d-flex align-items-stretch">
-            <div className="row g-4 d-flex align-items-stretch">
-              {/* {currentItems.length > 0 ? (
-                currentItems.map((product) => (
-                  <div key={product._id} className="col-6 col-md-4 col-lg-3">
-                    <div
-                      className="card h-100 border-0 shadow-sm text-center"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => openProductModal(product)}
-                    >
-                      <div
-                        style={{ height: "230px", backgroundColor: "#f8f9fa" }}
-                      >
-                        <img
-                          src={`http://localhost:3000/uploads/${product.image[0]}`}
-                          className="w-100 h-100 object-fit-cover"
-                          alt={product.name}
-                        />
-                      </div>
-                      <div className="card-body px-3 py-3">
-                        <small
-                          className="text-uppercase fw-bold text-muted"
-                          style={{ fontSize: "0.65rem" }}
-                        >
-                          {product.category}
-                        </small>
-                        <h6 className="fw-bold text-dark text-truncate mt-1 mb-2">
-                          {product.name}
-                        </h6>
-                        <div className="fw-bold" style={{ color: "#3e2723" }}>
-                          ${product.variants[0]?.price}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="col-12 text-center py-5 text-muted">
-                  No products found.
-                </div>
-              )} */}
+          <>
+            <div className="row g-4">
               {currentItems.map((product) => {
-                // Check if this product is in a flash sale
-                const activeSale = flashSales.find(
-                  (sale) => sale.productId._id === product._id,
+                // On dashboard, we check if ANY variant of this product is on sale for the badge
+                const hasAnySale = flashSales.some(
+                  (s) =>
+                    (typeof s.productId === "object"
+                      ? s.productId._id
+                      : s.productId) === product._id,
+                );
+                // For the price display, we check the first variant
+                const firstVarSale = getActiveSale(
+                  product._id,
+                  product.variants[0]?._id,
                 );
 
                 return (
@@ -216,10 +228,9 @@ const UserDashboard = () => {
                       style={{ cursor: "pointer" }}
                       onClick={() => openProductModal(product)}
                     >
-                      {/* FLASH SALE BADGE */}
-                      {activeSale && (
+                      {hasAnySale && (
                         <div
-                          className="position-absolute top-0 start-0 w-100 py-1 fw-bold text-white shadow-sm"
+                          className="position-absolute top-0 start-0 w-100 py-1 fw-bold text-white"
                           style={{
                             backgroundColor: "#d32f2f",
                             fontSize: "0.65rem",
@@ -229,7 +240,6 @@ const UserDashboard = () => {
                           ⚡ FLASH SALE ⚡
                         </div>
                       )}
-
                       <div
                         style={{ height: "230px", backgroundColor: "#f8f9fa" }}
                       >
@@ -239,18 +249,7 @@ const UserDashboard = () => {
                           alt={product.name}
                         />
                       </div>
-
                       <div className="card-body px-3 py-3">
-                        {/* TIMER ON DASHBOARD IF SALE ACTIVE */}
-                        {activeSale && (
-                          <div className="mb-2">
-                            <FlashSaleTimer
-                              startTime={activeSale.startTime}
-                              endTime={activeSale.endTime}
-                            />
-                          </div>
-                        )}
-
                         <small
                           className="text-uppercase fw-bold text-muted"
                           style={{ fontSize: "0.65rem" }}
@@ -260,17 +259,18 @@ const UserDashboard = () => {
                         <h6 className="fw-bold text-dark text-truncate mt-1 mb-2">
                           {product.name}
                         </h6>
-
                         <div
                           className="fw-bold"
-                          style={{ color: activeSale ? "#d32f2f" : "#3e2723" }}
+                          style={{
+                            color: firstVarSale ? "#d32f2f" : "#3e2723",
+                          }}
                         >
-                          {activeSale ? (
+                          {firstVarSale ? (
                             <span>
                               <span className="text-decoration-line-through text-muted me-2 small">
                                 ${product.variants[0]?.price}
                               </span>
-                              ${activeSale.salePrice}
+                              ${firstVarSale.salePrice}
                             </span>
                           ) : (
                             `$${product.variants[0]?.price}`
@@ -283,6 +283,7 @@ const UserDashboard = () => {
               })}
             </div>
 
+            {/* Pagination Controls */}
             {totalPages > 1 && (
               <nav className="mt-5 d-flex justify-content-center">
                 <ul className="pagination gap-2">
@@ -290,65 +291,55 @@ const UserDashboard = () => {
                     <button
                       className="page-link border-0 rounded-0 px-3 fw-bold"
                       style={{
-                        backgroundColor:
-                          currentPage === 1 ? "#e0e0e0" : "#3e2723",
-                        color: currentPage === 1 ? "#9e9e9e" : "white",
-                        cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                        transition: "0.3s",
+                        backgroundColor: "#3e2723",
+                        color: "white",
+                        opacity: currentPage === 1 ? 0.5 : 1,
                       }}
                       disabled={currentPage === 1}
                       onClick={() => setCurrentPage(currentPage - 1)}
                     >
-                      &larr; PREV
+                      &larr;
                     </button>
                   </li>
-
                   {[...Array(totalPages)].map((_, i) => (
-                    <li key={i} className="page-item">
+                    <li key={i}>
                       <button
-                        className="page-link border shadow-none rounded-0 fw-bold"
+                        onClick={() => setCurrentPage(i + 1)}
+                        className="page-link border rounded-0 fw-bold"
                         style={{
                           width: "40px",
-                          textAlign: "center",
                           backgroundColor:
                             currentPage === i + 1 ? "#3e2723" : "white",
                           color: currentPage === i + 1 ? "white" : "#3e2723",
                           borderColor: "#3e2723",
-                          transition: "0.3s",
                         }}
-                        onClick={() => setCurrentPage(i + 1)}
                       >
                         {i + 1}
                       </button>
                     </li>
                   ))}
-
                   <li className="page-item">
                     <button
                       className="page-link border-0 rounded-0 px-3 fw-bold"
                       style={{
-                        backgroundColor:
-                          currentPage === totalPages ? "#e0e0e0" : "#3e2723",
-                        color: currentPage === totalPages ? "#9e9e9e" : "white",
-                        cursor:
-                          currentPage === totalPages
-                            ? "not-allowed"
-                            : "pointer",
-                        transition: "0.3s",
+                        backgroundColor: "#3e2723",
+                        color: "white",
+                        opacity: currentPage === totalPages ? 0.5 : 1,
                       }}
                       disabled={currentPage === totalPages}
                       onClick={() => setCurrentPage(currentPage + 1)}
                     >
-                      NEXT &rarr;
+                      &rarr;
                     </button>
                   </li>
                 </ul>
               </nav>
             )}
-          </div>
+          </>
         )}
       </div>
 
+      {/* Modal */}
       {selectedProduct && (
         <div
           className="modal show d-block"
@@ -367,7 +358,6 @@ const UserDashboard = () => {
                   onClick={() => setSelectedProduct(null)}
                 ></button>
               </div>
-
               <div className="modal-body p-4 pt-0">
                 <div className="row g-4">
                   <div className="col-md-5">
@@ -377,22 +367,28 @@ const UserDashboard = () => {
                       setActiveIndex={setActiveIndex}
                     />
                   </div>
-
                   <div className="col-md-7">
-                    {flashSales.find(
-                      (s) => s.productId._id === selectedProduct._id,
+                    {/* DYNAMIC FLASH SALE ALERT FOR SELECTED VARIANT */}
+                    {getActiveSale(
+                      selectedProduct._id,
+                      selectedProduct.variants[activeIndex]?._id,
                     ) && (
                       <div className="alert alert-danger rounded-0 border-0 py-2 small fw-bold mb-3 d-flex justify-content-between align-items-center">
-                        <span>⚡ FLASH SALE PRICE!</span>
+                        <span>
+                          ⚡ {selectedProduct.variants[activeIndex].size} SALE
+                          PRICE!
+                        </span>
                         <FlashSaleTimer
                           startTime={
-                            flashSales.find(
-                              (s) => s.productId._id === selectedProduct._id,
+                            getActiveSale(
+                              selectedProduct._id,
+                              selectedProduct.variants[activeIndex]._id,
                             ).startTime
                           }
                           endTime={
-                            flashSales.find(
-                              (s) => s.productId._id === selectedProduct._id,
+                            getActiveSale(
+                              selectedProduct._id,
+                              selectedProduct.variants[activeIndex]._id,
                             ).endTime
                           }
                         />
@@ -408,8 +404,37 @@ const UserDashboard = () => {
                       {selectedProduct.name}
                     </h3>
 
-                    <h4 className="fw-bold mb-3" style={{ color: "#8d6e63" }}>
-                      ${selectedProduct.variants[activeIndex]?.price}
+                    {/* PRICE UPDATES BASED ON SELECTED VARIANT & SALE */}
+                    <h4
+                      className="fw-bold mb-3"
+                      style={{
+                        color: getActiveSale(
+                          selectedProduct._id,
+                          selectedProduct.variants[activeIndex]?._id,
+                        )
+                          ? "#d32f2f"
+                          : "#8d6e63",
+                      }}
+                    >
+                      {getActiveSale(
+                        selectedProduct._id,
+                        selectedProduct.variants[activeIndex]?._id,
+                      ) ? (
+                        <>
+                          <span className="text-decoration-line-through text-muted me-2 small">
+                            ${selectedProduct.variants[activeIndex]?.price}
+                          </span>
+                          $
+                          {
+                            getActiveSale(
+                              selectedProduct._id,
+                              selectedProduct.variants[activeIndex]._id,
+                            ).salePrice
+                          }
+                        </>
+                      ) : (
+                        `$${selectedProduct.variants[activeIndex]?.price}`
+                      )}
                     </h4>
 
                     <p
@@ -419,19 +444,15 @@ const UserDashboard = () => {
                       {selectedProduct.description}
                     </p>
 
-                    <h6
-                      className="fw-bold text-uppercase small tracking-widest mb-3"
-                      style={{ color: "#3e2723" }}
-                    >
-                      Select Option
+                    <h6 className="fw-bold text-uppercase small mb-3">
+                      Select Size/Color
                     </h6>
                     <div className="d-flex flex-wrap gap-2 mb-4">
                       {selectedProduct.variants.map((v, idx) => (
                         <button
                           key={idx}
                           onClick={() => setActiveIndex(idx)}
-                          className={`btn btn-sm border px-3 py-2 rounded-0 fw-bold transition-all ${activeIndex === idx ? "btn-dark" : "bg-white text-dark"}`}
-                          style={{ fontSize: "0.75rem" }}
+                          className={`btn btn-sm border px-3 py-2 rounded-0 fw-bold shadow-none transition-all ${activeIndex === idx ? "btn-dark" : "bg-white text-dark"}`}
                         >
                           {v.color} / {v.size}
                         </button>
@@ -442,20 +463,17 @@ const UserDashboard = () => {
                       <small className="text-muted d-block">
                         Availability:
                       </small>
-                      {selectedProduct.variants[activeIndex]?.stock > 0 ? (
-                        <span className="text-success fw-bold small">
-                          {selectedProduct.variants[activeIndex].stock} Items in
-                          Stock
-                        </span>
-                      ) : (
-                        <span className="text-danger fw-bold small">
-                          Currently Out of Stock
-                        </span>
-                      )}
+                      <span
+                        className={`fw-bold small ${selectedProduct.variants[activeIndex]?.stock > 0 ? "text-success" : "text-danger"}`}
+                      >
+                        {selectedProduct.variants[activeIndex]?.stock > 0
+                          ? `${selectedProduct.variants[activeIndex].stock} Items in Stock`
+                          : "Currently Out of Stock"}
+                      </span>
                     </div>
 
                     <button
-                      className="btn w-100 text-white fw-bold py-3 rounded-0 shadow-sm"
+                      className="btn w-100 text-white fw-bold py-3 rounded-0 shadow-sm border-0"
                       style={{
                         backgroundColor: "#3e2723",
                         opacity:
@@ -483,43 +501,9 @@ const UserDashboard = () => {
   );
 };
 
-const ProductImageGallery = ({ images, activeIndex, setActiveIndex }: any) => {
-  return (
-    <div className="d-flex flex-column gap-2">
-      <div
-        style={{ height: "350px", backgroundColor: "#f8f9fa" }}
-        className="rounded overflow-hidden border shadow-sm"
-      >
-        <img
-          src={`http://localhost:3000/uploads/${images[activeIndex]}`}
-          className="w-100 h-100 object-fit-cover"
-          alt="main-view"
-          onError={(e) => {
-            e.currentTarget.src = "https://placeholder.com";
-          }}
-        />
-      </div>
-      <div className="d-flex gap-2">
-        {images.map((img: string, idx: number) => (
-          <img
-            key={idx}
-            src={`http://localhost:3000/uploads/${img}`}
-            onClick={() => setActiveIndex(idx)}
-            className={`rounded border-2 ${activeIndex === idx ? "border-dark" : "border-transparent"}`}
-            style={{
-              width: "55px",
-              height: "55px",
-              objectFit: "cover",
-              cursor: "pointer",
-              opacity: activeIndex === idx ? 1 : 0.5,
-              transition: "0.2s",
-            }}
-            alt={`thumb-${idx}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
 export default UserDashboard;
+
+
+
+
+

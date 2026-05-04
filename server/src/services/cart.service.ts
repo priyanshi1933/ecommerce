@@ -6,6 +6,8 @@ export const addToCart = async (
   productId: string,
   variantId: string,
   quantity: number,
+  selectedImage: string
+  
 ) => {
   const uId = new Types.ObjectId(userId);
   const pId = new Types.ObjectId(productId);
@@ -14,16 +16,16 @@ export const addToCart = async (
   if (!cart) {
     return await CartModel.create({
       userId: uId,
-      items: [{ productId: pId, variantId: vId, quantity }],
+      items: [{ productId: pId, variantId: vId, quantity,selectedImage  }],
     });
   }
   const itemIndex = cart.items.findIndex(
     (item) => item.productId.equals(pId) && item.variantId.equals(vId),
   );
   if (itemIndex > -1) {
-    cart.items[itemIndex].quantity += quantity;
+    cart.items[itemIndex].quantity = quantity;
   } else {
-    cart.items.push({ productId: pId, variantId: vId, quantity });
+    cart.items.push({ productId: pId, variantId: vId, quantity ,selectedImage });
   }
   return await cart.save();
 };

@@ -34,6 +34,9 @@ export const handleBuyFlashItem = async (req: Request, res: Response) => {
   }
 };
 
+
+
+
 export const handleCreateFlashSale = async (req: Request, res: Response) => {
   try {
     const { productId, variantId, salePrice, maxUnits, startTime, endTime } = req.body;
@@ -68,4 +71,6 @@ export const handleGetActiveFlashSales = async (req: Request, res: Response) => 
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 

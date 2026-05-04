@@ -3,13 +3,14 @@ import * as CartService from "../services/cart.service";
 
 export const handleAddToCart = async (req: Request, res: Response) => {
   try {
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity,selectedImage  } = req.body;
     const userId = (req as any).user.id;
     const updatedCart = await CartService.addToCart(
       userId,
       productId,
       variantId,
       Number(quantity),
+      selectedImage 
     );
     res.status(200).json({
       success: true,

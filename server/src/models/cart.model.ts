@@ -6,6 +6,7 @@ export interface ICart extends Document {
     productId: Types.ObjectId;
     variantId: Types.ObjectId;
     quantity: number;
+    selectedImage: string;
   }[];
 }
 
@@ -32,7 +33,8 @@ const CartSchema: Schema<ICart> = new Schema<ICart>(
             required:true,
             default:1,
             min:1
-        }
+        },
+        selectedImage: { type: String, required: true }
       },
     ],
   },
