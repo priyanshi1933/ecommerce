@@ -151,7 +151,7 @@ const UserDashboard = () => {
         productId: selectedProduct._id,
         variantId: selectedVariant._id,
         quantity: 1,
-        selectedImage: selectedProduct.image[activeIndex] 
+        selectedImage: selectedProduct.image[activeIndex],
       };
       const res = await axios.post("http://localhost:3000/addCart", payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -502,8 +502,3 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
-
-
-
-
-

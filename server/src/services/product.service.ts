@@ -55,3 +55,23 @@ export const updateProduct = async (
 export const deleteProduct = async (id: string) => {
   return await ProductModel.findByIdAndDelete(id);
 };
+
+export const decrementStock = async (productId: string, variantId: string, qty: number) => {
+  const result = await ProductModel.findOneAndUpdate(
+    {
+      _id: productId,
+      "variants._id": variantId,
+      "variants.stock": { $gte: qty } // THE CRITICAL CHECK
+    },
+    {
+      $inc: { "variants.$.stock": -qty } // Atomic decrement
+    },
+    { returnDocument: 'after' } 
+  );
+
+  if (!result) {
+    throw new Error("INSUFFICIENT_STOCK");
+  }
+
+  return result;
+};

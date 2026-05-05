@@ -3,6 +3,7 @@ import { UserModel } from "../models/user.model";
 import { OrderModel } from "../models/order.model";
 import { Types } from "mongoose";
 
+
 export const registerUserForSale = async (
   flashSaleId: string,
   userId: string,
@@ -23,26 +24,27 @@ export const registerUserForSale = async (
 
 
 
-
 export const executeFlashPurchase = async (
   flashSaleId: string,
   userId: string,
   paymentStatus: string,
+  quantity: number = 1 
 ) => {
   const now = new Date();
 
+  // 2. Updated Atomic logic to check if (soldUnits + requested quantity) <= maxUnits
   const sale = await FlashsaleModel.findOneAndUpdate(
     {
       _id: new Types.ObjectId(flashSaleId),
       startTime: { $lte: now },
       endTime: { $gte: now },
-      $expr: { $lt: ["$soldUnits", "$maxUnits"] },
+      $expr: { $lte: [{ $add: ["$soldUnits", quantity] }, "$maxUnits"] },
     },
-    { $inc: { soldUnits: 1 } },
+    { $inc: { soldUnits: quantity } }, // 3. Increment by the requested quantity
     { new: true },
   ).populate("productId");
 
-  if (!sale) throw new Error("Sale locked, ended, or sold out.");
+  if (!sale) throw new Error("Sale locked, ended, or insufficient stock for requested quantity.");
 
   const product = sale.productId as any;
 
@@ -61,13 +63,13 @@ export const executeFlashPurchase = async (
         variantId: sale.variantId,
         name: `[FLASH SALE] ${product.name}`,
         price: sale.salePrice,
-        quantity: 1,
+        quantity: quantity, // 4. Store the actual quantity bought
         image: selectedImage,
         color: variant?.color || "N/A",
         size: variant?.size || "N/A",
       },
     ],
-    totalAmount: sale.salePrice,
+    totalAmount: sale.salePrice * quantity, // 5. Calculate total (Price x Qty)
     idempotencyKey: `flash-${flashSaleId}-${userId}-${Date.now()}`,
     paymentStatus: paymentStatus,
     status: "Placed",
@@ -76,6 +78,9 @@ export const executeFlashPurchase = async (
 
   return newOrder;
 };
+
+
+
 
 
 
@@ -104,3 +109,4 @@ export const getActiveFlashSales = async () => {
     .populate("productId")
     .sort({ startTime: 1 });
 };
+

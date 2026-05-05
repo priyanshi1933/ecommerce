@@ -72,6 +72,13 @@ const UserNavbar = ({ searchTerm, setSearchTerm }: NavbarProps) => {
           >
             ORDERS
           </Link>
+            <Link 
+            to="/flashSales" 
+            className={`text-decoration-none small fw-bold ${isActive('/flashSales') ? 'text-dark' : 'text-muted'}`}
+            style={{ letterSpacing: '0.5px' }}
+          >
+            FLASH SALES
+          </Link>
           <Link to="/cart" className="position-relative text-dark">
             <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
